@@ -32,6 +32,9 @@ impl World {
     self.sessions.insert(id, s);
     println!("managing session: {}", id);
   }
+  pub fn get_session(&self, id: Uuid) -> Option<&Session> {
+    self.sessions.get(&id)
+  }
   pub fn get_session_mut(&mut self, id: Uuid) -> Option<&mut Session> {
     self.sessions.get_mut(&id)
   }
