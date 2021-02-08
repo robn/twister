@@ -20,16 +20,19 @@ impl World {
     self.channels.insert(id, c);
     println!("managing channel: {}", id);
   }
+  pub fn get_channel(&self, id: Uuid) -> Option<&Channel> {
+    self.channels.get(&id)
+  }
+  pub fn get_channel_mut(&mut self, id: Uuid) -> Option<&mut Channel> {
+    self.channels.get_mut(&id)
+  }
 
   pub fn manage_session(&mut self, s: Session) {
     let id = s.id();
     self.sessions.insert(id, s);
     println!("managing session: {}", id);
   }
-
-  /*
-  fn get_session(&self, id: Uuid) -> Option<&Session> {
-    self.sessions.get(&id)
+  pub fn get_session_mut(&mut self, id: Uuid) -> Option<&mut Session> {
+    self.sessions.get_mut(&id)
   }
-  */
 }
