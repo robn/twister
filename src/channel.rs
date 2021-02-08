@@ -34,7 +34,8 @@ impl Channel {
 }
 
 impl Receiver for Channel {
-  fn receive(&self, s: &dyn Sender, msg: &Message) {
+  fn receive(&self, sender_id: Uuid, msg: &Message) {
+    println!("channel {} received message: {:?}", self.id, msg);
   }
 }
 

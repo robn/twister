@@ -22,7 +22,8 @@ impl Session {
 }
 
 impl Receiver for Session {
-  fn receive(&self, s: &dyn Sender, msg: &Message) {
+  fn receive(&self, sender_id: Uuid, msg: &Message) {
+    println!("session {} received message: {:?}", self.id, msg);
   }
 }
 

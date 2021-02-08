@@ -7,9 +7,11 @@ mod channel;
 mod session;
 mod world;
 
+use crate::traits::Receiver;
 use crate::world::world;
 use crate::channel::Channel;
 use crate::session::Session;
+use crate::message::Message;
 
 fn main() {
   let c = Channel::new();
@@ -28,5 +30,11 @@ fn main() {
   if let Some(c) = world().get_channel_mut(c_id) {
     c.add_session(s1_id);
     c.add_session(s2_id);
+  }
+
+  let m = Message::Text("hello".to_string());
+
+  if let Some(c) = world().get_channel_mut(c_id) {
+    c.receive(s1_id, &m);
   }
 }
