@@ -36,3 +36,15 @@ impl World {
     self.sessions.get_mut(&id)
   }
 }
+
+use std::sync::{Mutex,MutexGuard};
+
+lazy_static!(
+  static ref _WORLD: Mutex<World> = {
+    Mutex::new(World::new())
+  };
+);
+
+pub fn world() -> MutexGuard<'static, World> {
+  _WORLD.lock().unwrap()
+}
