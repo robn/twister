@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 mod traits;
 mod message;
 mod channel;
@@ -8,10 +11,16 @@ use crate::world::World;
 use crate::channel::Channel;
 use crate::session::Session;
 
-fn main() {
-  let mut world = World::new();
+use std::sync::Mutex;
 
-  let mut c = Channel::new();
+lazy_static!(
+  static ref WORLD: Mutex<World> = {
+    Mutex::new(World::new())
+  };
+);
+
+fn main() {
+  let c = Channel::new();
   let c_id = c.id();
 
   let s1 = Session::new();
@@ -19,12 +28,12 @@ fn main() {
   let s2 = Session::new();
   let s2_id = s2.id();
 
-  world.manage_channel(c);
+  WORLD.lock().unwrap().manage_channel(c);
 
-  world.manage_session(s1);
-  world.manage_session(s2);
+  WORLD.lock().unwrap().manage_session(s1);
+  WORLD.lock().unwrap().manage_session(s2);
 
-  if let Some(mut c) = world.get_channel_mut(c_id) {
+  if let Some(c) = WORLD.lock().unwrap().get_channel_mut(c_id) {
     c.add_session(s1_id);
     c.add_session(s2_id);
   }
