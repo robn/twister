@@ -7,22 +7,41 @@ mod server;
 
 use crate::traits::Receiver;
 use crate::world::World;
-use crate::server::Server;
+use crate::server::{Server,ServerMessage};
 use crate::channel::Channel;
 use crate::session::Session;
 use crate::message::Message;
 
 use std::error::Error;
+use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn Error>> {
   let mut world = World::new();
 
   let mut server = Server::new()?;
 
+  let mut session_token: HashMap<mio::Token, uuid::Uuid> = HashMap::new();
+
   loop {
     let messages = server.pump()?;
 
-    println!("{:?}", messages);
+    for m in messages.iter() {
+      match m {
+        ServerMessage::Connect(token) => {
+          let s = Session::new();
+          session_token.insert(*token, s.id());
+          world.manage_session(s);
+        },
+        ServerMessage::Disconnect(token) => {
+          if let Some(sid) = session_token.get(token) {
+            world.drop_session(*sid);
+            session_token.remove(token);
+          }
+        },
+        ServerMessage::Read(token, buf) => {
+        },
+      }
+    }
 
     /*
     for &m in messages.iter() {
