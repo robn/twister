@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 mod traits;
 mod message;
 mod channel;
@@ -8,12 +5,14 @@ mod session;
 mod world;
 
 use crate::traits::Receiver;
-use crate::world::world;
+use crate::world::World;
 use crate::channel::Channel;
 use crate::session::Session;
 use crate::message::Message;
 
 fn main() {
+  let mut world = World::new();
+
   let c = Channel::new();
   let c_id = c.id();
 
@@ -22,19 +21,19 @@ fn main() {
   let s2 = Session::new();
   let s2_id = s2.id();
 
-  world().manage_channel(c);
+  world.manage_channel(c);
 
-  world().manage_session(s1);
-  world().manage_session(s2);
+  world.manage_session(s1);
+  world.manage_session(s2);
 
-  if let Some(c) = world().get_channel_mut(c_id) {
+  if let Some(c) = world.get_channel_mut(c_id) {
     c.add_session(s1_id);
     c.add_session(s2_id);
   }
 
   let m = Message::Text("hello".to_string());
 
-  if let Some(c) = world().get_channel_mut(c_id) {
-    c.receive(s1_id, &m);
+  if let Some(c) = world.get_channel(c_id) {
+    c.receive(&world, s1_id, &m);
   }
 }

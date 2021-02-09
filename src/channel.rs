@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use crate::traits::{Receiver, Sender};
 use crate::message::Message;
-use crate::world::world;
+use crate::world::World;
 
 #[derive(Default)]
 pub struct Channel {
@@ -35,11 +35,11 @@ impl Channel {
 }
 
 impl Receiver for Channel {
-  fn receive(&self, sender_id: Uuid, msg: &Message) {
+  fn receive(&self, world: &World, sender_id: Uuid, msg: &Message) {
     println!("channel {} received message: {:?}", self.id, msg);
     for &id in self.sessions.iter() {
-      if let Some(s) = world().get_session(id) {
-        s.receive(sender_id, msg);
+      if let Some(s) = world.get_session(id) {
+        s.receive(world, sender_id, msg);
       }
     }
   }
