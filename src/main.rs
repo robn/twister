@@ -5,7 +5,7 @@ mod session;
 mod world;
 mod server;
 
-use crate::traits::Receiver;
+use crate::traits::MessageReceiver;
 use crate::world::World;
 use crate::server::{Server,ServerMessage};
 use crate::channel::Channel;
@@ -39,6 +39,16 @@ fn main() -> Result<(), Box<dyn Error>> {
           }
         },
         ServerMessage::Read(token, buf) => {
+          if let Some(sid) = session_token.get(token) {
+            // XXX extremely dumb parser, for now all input is just a text line
+            if let Ok(str) = std::str::from_utf8(buf) {
+              if let Some(s) = world.get_session_mut(*sid) {
+                for line in str.lines() {
+                  s.queue(Message::Input(line.trim().to_string()));
+                }
+              }
+            }
+          }
         },
       }
     }

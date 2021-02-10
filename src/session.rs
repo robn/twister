@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::traits::{Receiver, Sender};
+use crate::traits::{MessageReceiver, Sender};
 use crate::world::World;
 use crate::message::Message;
 
@@ -22,9 +22,9 @@ impl Session {
   }
 }
 
-impl Receiver for Session {
-  fn receive(&self, world: &World, sender_id: Uuid, msg: &Message) {
-    println!("session {} received message: {:?}", self.id, msg);
+impl MessageReceiver for Session {
+  fn queue(&mut self, msg: Message) {
+    println!("session {} queued message: {:?}", self.id, msg);
   }
 }
 

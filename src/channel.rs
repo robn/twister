@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use std::collections::HashSet;
 
-use crate::traits::{Receiver, Sender};
+use crate::traits::{MessageReceiver, Sender};
 use crate::message::Message;
 use crate::world::World;
 
@@ -34,7 +34,10 @@ impl Channel {
   }
 }
 
-impl Receiver for Channel {
+impl MessageReceiver for Channel {
+  fn queue(&mut self, msg: Message) {
+  }
+  /*
   fn receive(&self, world: &World, sender_id: Uuid, msg: &Message) {
     println!("channel {} received message: {:?}", self.id, msg);
     for &id in self.sessions.iter() {
@@ -43,6 +46,7 @@ impl Receiver for Channel {
       }
     }
   }
+  */
 }
 
 impl Sender for Channel {
