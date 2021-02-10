@@ -53,6 +53,8 @@ fn main() -> Result<(), Box<dyn Error>> {
       }
     }
 
+    world.pump();
+
     /*
     for &m in messages.iter() {
       if let Some(s) = world.get_session(m.from()) {

@@ -8,5 +8,6 @@ pub trait Sender {
 
 pub trait MessageReceiver {
   fn queue(&mut self, msg: Message);
+  fn pump(&mut self);
 }
 

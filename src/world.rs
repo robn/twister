@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use crate::session::Session;
 use crate::channel::Channel;
+use crate::traits::MessageReceiver;
 
 #[derive(Default)]
 pub struct World {
@@ -41,5 +42,12 @@ impl World {
   }
   pub fn get_session_mut(&mut self, id: Uuid) -> Option<&mut Session> {
     self.sessions.get_mut(&id)
+  }
+
+
+  pub fn pump(&mut self) {
+    for (sid, mut s) in self.sessions.iter_mut() {
+      s.pump();
+    }
   }
 }

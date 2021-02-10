@@ -6,7 +6,8 @@ use crate::message::Message;
 
 #[derive(Default)]
 pub struct Session {
-  id: Uuid,
+  id:    Uuid,
+  queue: Vec<Message>,
 }
 
 impl Session {
@@ -25,6 +26,17 @@ impl Session {
 impl MessageReceiver for Session {
   fn queue(&mut self, msg: Message) {
     println!("session {} queued message: {:?}", self.id, msg);
+    self.queue.push(msg);
+  }
+
+  fn pump(&mut self) {
+    println!("session {} pump", self.id);
+
+    for msg in self.queue.iter() {
+      println!("session {} pump message: {:?}", self.id, msg);
+    }
+
+    self.queue.truncate(0);
   }
 }
 

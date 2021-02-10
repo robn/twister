@@ -37,6 +37,10 @@ impl Channel {
 impl MessageReceiver for Channel {
   fn queue(&mut self, msg: Message) {
   }
+
+  fn pump(&mut self) {
+  }
+
   /*
   fn receive(&self, world: &World, sender_id: Uuid, msg: &Message) {
     println!("channel {} received message: {:?}", self.id, msg);
