@@ -34,6 +34,13 @@ impl MessageReceiver for Session {
 
     for msg in self.queue.iter() {
       println!("session {} pump message: {:?}", self.id, msg);
+
+      match msg {
+        Message::Input(text) => {
+          println!("session {} input: {}", self.id, text);
+        },
+        _ => unimplemented!(),
+      }
     }
 
     self.queue.truncate(0);
