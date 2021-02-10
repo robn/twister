@@ -77,7 +77,7 @@ impl Server {
                   messages.push(ServerMessage::Disconnect(token));
                 },
                 Ok(n) => {
-                  messages.push(ServerMessage::Read(token, buf));
+                  messages.push(ServerMessage::Read(token, buf[..n].to_vec()));
                 },
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
                 Err(e) => return Err(e),
