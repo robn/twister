@@ -1,16 +1,13 @@
-mod traits;
 mod message;
-mod channel;
+//mod channel;
 mod session;
 mod world;
 mod server;
 
-use crate::traits::MessageReceiver;
 use crate::world::World;
-use crate::server::{Server,ServerMessage};
-use crate::channel::Channel;
+use crate::server::Server;
 use crate::session::Session;
-use crate::message::Message;
+use crate::message::{ServerEvent,SessionAction};
 
 use std::error::Error;
 use std::collections::HashMap;
@@ -23,28 +20,28 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut session_token: HashMap<mio::Token, uuid::Uuid> = HashMap::new();
 
   loop {
-    let messages = server.pump()?;
+    let events = server.pump()?;
 
-    for m in messages.iter() {
-      match m {
-        ServerMessage::Connect(token) => {
+    for event in events.iter() {
+      match event {
+        ServerEvent::Connect(token) => {
           let s = Session::new();
           session_token.insert(*token, s.id());
           world.manage_session(s);
         },
-        ServerMessage::Disconnect(token) => {
+        ServerEvent::Disconnect(token) => {
           if let Some(sid) = session_token.get(token) {
             world.drop_session(*sid);
             session_token.remove(token);
           }
         },
-        ServerMessage::Read(token, buf) => {
+        ServerEvent::Read(token, buf) => {
           if let Some(sid) = session_token.get(token) {
             // XXX extremely dumb parser, for now all input is just a text line
             if let Ok(str) = std::str::from_utf8(buf) {
               if let Some(s) = world.get_session_mut(*sid) {
                 for line in str.lines() {
-                  s.queue(Message::Input(line.trim().to_string()));
+                  s.queue_action(SessionAction::Input(line.trim().to_string()));
                 }
               }
             }
@@ -53,7 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       }
     }
 
-    world.pump();
+    world.process();
 
     /*
     for &m in messages.iter() {

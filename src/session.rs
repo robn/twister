@@ -1,13 +1,11 @@
 use uuid::Uuid;
 
-use crate::traits::{MessageReceiver, Sender};
-use crate::world::World;
-use crate::message::Message;
+use crate::message::SessionAction;
 
 #[derive(Default)]
 pub struct Session {
-  id:    Uuid,
-  queue: Vec<Message>,
+  id:      Uuid,
+  actions: Vec<SessionAction>,
 }
 
 impl Session {
@@ -21,31 +19,25 @@ impl Session {
   pub fn id(&self) -> Uuid {
     self.id
   }
-}
 
-impl MessageReceiver for Session {
-  fn queue(&mut self, msg: Message) {
-    println!("session {} queued message: {:?}", self.id, msg);
-    self.queue.push(msg);
+  pub fn queue_action(&mut self, action: SessionAction) {
+    println!("session {} queued action: {:?}", self.id, action);
+    self.actions.push(action);
   }
 
-  fn pump(&mut self) {
-    println!("session {} pump", self.id);
+  pub fn process_actions(&mut self) {
+    println!("session {} processing", self.id);
 
-    for msg in self.queue.iter() {
-      println!("session {} pump message: {:?}", self.id, msg);
+    for action in self.actions.iter() {
+      println!("session {} process action: {:?}", self.id, action);
 
-      match msg {
-        Message::Input(text) => {
+      match action {
+        SessionAction::Input(text) => {
           println!("session {} input: {}", self.id, text);
         },
-        _ => unimplemented!(),
       }
     }
 
-    self.queue.truncate(0);
+    self.actions.truncate(0);
   }
-}
-
-impl Sender for Session {
 }

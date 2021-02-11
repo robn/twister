@@ -1,10 +1,6 @@
 use uuid::Uuid;
 use std::collections::HashSet;
 
-use crate::traits::{MessageReceiver, Sender};
-use crate::message::Message;
-use crate::world::World;
-
 #[derive(Default)]
 pub struct Channel {
   id: Uuid,
@@ -32,14 +28,14 @@ impl Channel {
     self.sessions.remove(&id);
     println!("channel {} removing session: {}", self.id, id);
   }
-}
 
-impl MessageReceiver for Channel {
+  /*
   fn queue(&mut self, msg: Message) {
   }
 
   fn pump(&mut self) {
   }
+  */
 
   /*
   fn receive(&self, world: &World, sender_id: Uuid, msg: &Message) {
@@ -51,7 +47,4 @@ impl MessageReceiver for Channel {
     }
   }
   */
-}
-
-impl Sender for Channel {
 }

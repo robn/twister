@@ -3,12 +3,7 @@ use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
 use std::io::{self, Read};
 
-#[derive(Debug)]
-pub enum ServerMessage {
-  Connect(Token),
-  Disconnect(Token),
-  Read(Token, Vec<u8>),
-}
+use crate::message::ServerEvent;
 
 pub struct Server {
   poll:        Poll,
@@ -33,14 +28,14 @@ impl Server {
     Ok(server)
   }
 
-  pub fn pump(&mut self) -> io::Result<Vec<ServerMessage>> {
-    let mut messages: Vec<ServerMessage> = vec!();
+  pub fn pump(&mut self) -> io::Result<Vec<ServerEvent>> {
+    let mut events: Vec<ServerEvent> = vec!();
 
-    let mut events = Events::with_capacity(128);
+    let mut io_events = Events::with_capacity(128);
 
-    self.poll.poll(&mut events, None)?;
+    self.poll.poll(&mut io_events, None)?;
 
-    for event in events.iter() {
+    for event in io_events.iter() {
       match event.token() {
 
         // listening socket
@@ -60,7 +55,7 @@ impl Server {
             self.poll.registry().register(&mut conn, self.token, Interest::READABLE.add(Interest::WRITABLE))?;
             self.connections.insert(self.token, conn);
 
-            messages.push(ServerMessage::Connect(self.token));
+            events.push(ServerEvent::Connect(self.token));
           }
         },
 
@@ -74,10 +69,10 @@ impl Server {
                   // disconnected
                   println!("disconnected: {}", conn.peer_addr()?);
                   self.connections.remove(&token);
-                  messages.push(ServerMessage::Disconnect(token));
+                  events.push(ServerEvent::Disconnect(token));
                 },
                 Ok(n) => {
-                  messages.push(ServerMessage::Read(token, buf[..n].to_vec()));
+                  events.push(ServerEvent::Read(token, buf[..n].to_vec()));
                 },
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
                 Err(e) => return Err(e),
@@ -88,6 +83,6 @@ impl Server {
       };
     }
 
-    Ok(messages)
+    Ok(events)
   }
 }
