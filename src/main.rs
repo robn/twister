@@ -28,14 +28,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         ServerEvent::Disconnect(sid) => {
           world.drop_session(*sid);
         },
-        ServerEvent::Read(sid, buf) => {
-          // XXX extremely dumb parser, for now all input is just a text line
-          if let Ok(str) = std::str::from_utf8(buf) {
-            if let Some(s) = world.get_session_mut(*sid) {
-              for line in str.lines() {
-                s.queue_action(SessionAction::Input(line.trim().to_string()));
-              }
-            }
+        ServerEvent::Read(sid, str) => {
+          if let Some(s) = world.get_session_mut(*sid) {
+            s.queue_action(SessionAction::Input(str.to_string()));
           }
         },
       }

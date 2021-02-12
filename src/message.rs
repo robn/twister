@@ -5,7 +5,7 @@ use uuid::Uuid;
 pub enum ServerEvent {
   Connect(Uuid),
   Disconnect(Uuid),
-  Read(Uuid, Vec<u8>),
+  Read(Uuid, String),
 }
 
 // things we want the session to do
@@ -22,5 +22,5 @@ pub enum WorldAction {
 // things we want the server to do
 #[derive(Debug)]
 pub enum ServerAction {
-  //Write(Uuid, Vec<u8>),
+  //Write(Uuid, String),
 }

@@ -82,8 +82,17 @@ impl Server {
                 },
 
                 Ok(n) => {
-                  let sid = self.sid_map.get_by_left(&token).unwrap();
-                  events.push(ServerEvent::Read(*sid, buf[..n].to_vec()));
+                  // convert buffer to utf8, if that works, pull out all the lines
+                  // XXX non-utf8?
+                  // XXX incomplete lines?
+                  if let Ok(str) = std::str::from_utf8(&buf[..n]) {
+                    let sid = self.sid_map.get_by_left(&token).unwrap();
+
+                    for line in str.lines() {
+                      events.push(ServerEvent::Read(*sid, line.trim().to_string()));
+                    }
+                  }
+
                 },
 
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
