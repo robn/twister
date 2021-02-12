@@ -1,6 +1,8 @@
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
+use bimap::BiHashMap;
+use uuid::Uuid;
 use std::io::{self, Read};
 
 use crate::message::ServerEvent;
@@ -10,6 +12,7 @@ pub struct Server {
   listener:    TcpListener,
   token:       Token,
   connections: HashMap<Token,TcpStream>,
+  sid_map:     BiHashMap<Token,Uuid>
 }
 
 impl Server {
@@ -21,6 +24,7 @@ impl Server {
       listener:    TcpListener::bind(addr)?,
       token:       Token(1),
       connections: HashMap::new(),
+      sid_map:     BiHashMap::new(),
     };
 
     server.poll.registry().register(&mut server.listener, Token(0), Interest::READABLE)?;
@@ -55,7 +59,10 @@ impl Server {
             self.poll.registry().register(&mut conn, self.token, Interest::READABLE.add(Interest::WRITABLE))?;
             self.connections.insert(self.token, conn);
 
-            events.push(ServerEvent::Connect(self.token));
+            let sid = Uuid::new_v4();
+            self.sid_map.insert(self.token, sid);
+
+            events.push(ServerEvent::Connect(sid));
           }
         },
 
@@ -69,11 +76,16 @@ impl Server {
                   // disconnected
                   println!("disconnected: {}", conn.peer_addr()?);
                   self.connections.remove(&token);
-                  events.push(ServerEvent::Disconnect(token));
+
+                  let (_, sid) = self.sid_map.remove_by_left(&token).unwrap();
+                  events.push(ServerEvent::Disconnect(sid));
                 },
+
                 Ok(n) => {
-                  events.push(ServerEvent::Read(token, buf[..n].to_vec()));
+                  let sid = self.sid_map.get_by_left(&token).unwrap();
+                  events.push(ServerEvent::Read(*sid, buf[..n].to_vec()));
                 },
+
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
                 Err(e) => return Err(e),
               }

@@ -10,39 +10,30 @@ use crate::session::Session;
 use crate::message::{ServerEvent,SessionAction};
 
 use std::error::Error;
-use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn Error>> {
   let mut world = World::new();
 
   let mut server = Server::new()?;
 
-  let mut session_token: HashMap<mio::Token, uuid::Uuid> = HashMap::new();
-
   loop {
     let events = server.pump()?;
 
     for event in events.iter() {
       match event {
-        ServerEvent::Connect(token) => {
-          let s = Session::new();
-          session_token.insert(*token, s.id());
+        ServerEvent::Connect(sid) => {
+          let s = Session::new(*sid);
           world.manage_session(s);
         },
-        ServerEvent::Disconnect(token) => {
-          if let Some(sid) = session_token.get(token) {
-            world.drop_session(*sid);
-            session_token.remove(token);
-          }
+        ServerEvent::Disconnect(sid) => {
+          world.drop_session(*sid);
         },
-        ServerEvent::Read(token, buf) => {
-          if let Some(sid) = session_token.get(token) {
-            // XXX extremely dumb parser, for now all input is just a text line
-            if let Ok(str) = std::str::from_utf8(buf) {
-              if let Some(s) = world.get_session_mut(*sid) {
-                for line in str.lines() {
-                  s.queue_action(SessionAction::Input(line.trim().to_string()));
-                }
+        ServerEvent::Read(sid, buf) => {
+          // XXX extremely dumb parser, for now all input is just a text line
+          if let Ok(str) = std::str::from_utf8(buf) {
+            if let Some(s) = world.get_session_mut(*sid) {
+              for line in str.lines() {
+                s.queue_action(SessionAction::Input(line.trim().to_string()));
               }
             }
           }

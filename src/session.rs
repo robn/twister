@@ -9,9 +9,9 @@ pub struct Session {
 }
 
 impl Session {
-  pub fn new() -> Self {
+  pub fn new(sid: Uuid) -> Self {
     Session {
-      id: Uuid::new_v4(),
+      id: sid,
       ..Default::default()
     }
   }
