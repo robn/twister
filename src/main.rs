@@ -17,9 +17,9 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut server = Server::new()?;
 
   loop {
-    let events = server.pump()?;
+    let server_events = server.pump()?;
 
-    for event in events.iter() {
+    for event in server_events.iter() {
       match event {
         ServerEvent::Connect(sid) => {
           let s = Session::new(*sid);
@@ -36,7 +36,9 @@ fn main() -> Result<(), Box<dyn Error>> {
       }
     }
 
-    world.process();
+    let server_actions = world.process();
+
+    server.process_actions(server_actions)?;
 
     /*
     for &m in messages.iter() {

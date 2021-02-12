@@ -2,6 +2,7 @@ use uuid::Uuid;
 use std::collections::HashMap;
 
 use crate::session::Session;
+use crate::message::{WorldAction, ServerAction};
 
 #[derive(Default)]
 pub struct World {
@@ -32,9 +33,26 @@ impl World {
   }
 
 
-  pub fn process(&mut self) {
+  pub fn process(&mut self) -> Vec<ServerAction> {
+    let mut world_actions = vec!();
+
     for (_, s) in self.sessions.iter_mut() {
-      s.process_actions();
+      world_actions.append(&mut s.process_actions());
     }
+
+    let mut server_actions = vec!();
+
+    for action in world_actions.iter() {
+      match action {
+        WorldAction::Wall(text) => {
+          println!("wall: {}", text);
+          for (id, _) in self.sessions.iter() {
+            server_actions.push(ServerAction::Write(*id, text.to_string()));
+          }
+        },
+      }
+    }
+
+    server_actions
   }
 }

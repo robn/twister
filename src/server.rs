@@ -3,16 +3,17 @@ use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
 use bimap::BiHashMap;
 use uuid::Uuid;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 
-use crate::message::ServerEvent;
+use crate::message::{ServerEvent, ServerAction};
 
 pub struct Server {
   poll:        Poll,
   listener:    TcpListener,
   token:       Token,
   connections: HashMap<Token,TcpStream>,
-  sid_map:     BiHashMap<Token,Uuid>
+  sid_map:     BiHashMap<Token,Uuid>,
+  write_queue: HashMap<Token,Vec<Vec<u8>>>,
 }
 
 impl Server {
@@ -25,6 +26,7 @@ impl Server {
       token:       Token(1),
       connections: HashMap::new(),
       sid_map:     BiHashMap::new(),
+      write_queue: HashMap::new(),
     };
 
     server.poll.registry().register(&mut server.listener, Token(0), Interest::READABLE)?;
@@ -68,6 +70,22 @@ impl Server {
 
         // activity on user conn
         token => {
+          if event.is_writable() {
+            // XXX all kinda shit. mostly, what do errors even mean?
+            if let Some(queue) = self.write_queue.remove(&token) {
+              if let Some(conn) = self.connections.get_mut(&token) {
+                for data in queue {
+                  match conn.write(&data) {
+                    Ok(n) if n < data.len() => return Err(io::ErrorKind::WriteZero.into()),
+                    Ok(_) => self.poll.registry().reregister(&mut *conn, token, Interest::READABLE)?,
+                    Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
+                    Err(e) => return Err(e),
+                  }
+                }
+              }
+            }
+          }
+
           if event.is_readable() {
             if let Some(conn) = self.connections.get_mut(&token) {
               let mut buf = vec![0; 4096];
@@ -105,5 +123,32 @@ impl Server {
     }
 
     Ok(events)
+  }
+
+  pub fn process_actions(&mut self, actions: Vec<ServerAction>) -> io::Result<()> {
+    for action in actions {
+      match action {
+        ServerAction::Write(sid, str) => {
+          println!("session {} queued write: {}", sid, str);
+
+          let token = self.sid_map.get_by_right(&sid).unwrap();
+
+          let mut queue = match self.write_queue.remove(token) {
+            Some(v) => v,
+            None    => vec!(),
+          };
+
+          // XXX newlines hmm
+          queue.push((str.to_owned() + &"\r\n".to_string()).as_bytes().to_vec());
+          self.write_queue.insert(*token, queue);
+
+          if let Some(conn) = self.connections.get_mut(&token) {
+            self.poll.registry().reregister(&mut *conn, *token, Interest::READABLE.add(Interest::WRITABLE))?;
+          }
+        },
+      }
+    }
+
+    Ok(())
   }
 }

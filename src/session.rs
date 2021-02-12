@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::message::SessionAction;
+use crate::message::{SessionAction, WorldAction};
 
 #[derive(Default)]
 pub struct Session {
@@ -25,7 +25,9 @@ impl Session {
     self.actions.push(action);
   }
 
-  pub fn process_actions(&mut self) {
+  pub fn process_actions(&mut self) -> Vec<WorldAction> {
+    let mut world_actions = vec!();
+
     println!("session {} processing", self.id);
 
     for action in self.actions.iter() {
@@ -34,10 +36,14 @@ impl Session {
       match action {
         SessionAction::Input(text) => {
           println!("session {} input: {}", self.id, text);
+
+          world_actions.push(WorldAction::Wall(text.to_string()));
         },
       }
     }
 
     self.actions.truncate(0);
+
+    world_actions
   }
 }
