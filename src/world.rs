@@ -4,7 +4,7 @@ use std::error::Error;
 
 use crate::session::Session;
 use crate::server::Server;
-use crate::message::{SessionAction, WorldAction, ServerAction, ServerEvent};
+use crate::message::{WorldAction, ServerAction, ServerEvent};
 
 #[derive(Default)]
 pub struct World {
@@ -31,11 +31,11 @@ impl World {
             self.sessions.remove(&sid);
             println!("dropped session: {}", sid);
           },
-          ServerEvent::Read(sid, str) => {
+          ServerEvent::Read(sid, line) => {
             if let Some(s) = self.sessions.get_mut(&sid) {
-              s.queue_action(SessionAction::Input(str.to_string()));
+              s.input(line);
             }
-          },
+          }
         }
       }
 

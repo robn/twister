@@ -8,12 +8,6 @@ pub enum ServerEvent {
   Read(Uuid, String),
 }
 
-// things we want the session to do
-#[derive(Debug)]
-pub enum SessionAction {
-  Input(String),
-}
-
 // things we want the world to do
 #[derive(Debug)]
 pub enum WorldAction {
