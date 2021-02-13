@@ -6,39 +6,16 @@ mod server;
 
 use crate::world::World;
 use crate::server::Server;
-use crate::session::Session;
-use crate::message::{ServerEvent,SessionAction};
 
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
   let mut world = World::new();
 
-  let mut server = Server::new()?;
+  let server = Server::new()?;
 
-  loop {
-    let server_events = server.pump()?;
-
-    for event in server_events.iter() {
-      match event {
-        ServerEvent::Connect(sid) => {
-          let s = Session::new(*sid);
-          world.manage_session(s);
-        },
-        ServerEvent::Disconnect(sid) => {
-          world.drop_session(*sid);
-        },
-        ServerEvent::Read(sid, str) => {
-          if let Some(s) = world.get_session_mut(*sid) {
-            s.queue_action(SessionAction::Input(str.to_string()));
-          }
-        },
-      }
-    }
-
-    let server_actions = world.process();
-
-    server.process_actions(server_actions)?;
+  world.run(server)
+}
 
     /*
     for &m in messages.iter() {
@@ -47,7 +24,6 @@ fn main() -> Result<(), Box<dyn Error>> {
       }
     }
     */
-  }
 
 /*
   let c = Channel::new();
@@ -74,4 +50,3 @@ fn main() -> Result<(), Box<dyn Error>> {
     c.receive(&world, s1_id, &m);
   }
 */
-}

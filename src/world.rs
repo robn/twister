@@ -1,8 +1,10 @@
 use uuid::Uuid;
 use std::collections::HashMap;
+use std::error::Error;
 
 use crate::session::Session;
-use crate::message::{WorldAction, ServerAction};
+use crate::server::Server;
+use crate::message::{SessionAction, WorldAction, ServerAction, ServerEvent};
 
 #[derive(Default)]
 pub struct World {
@@ -14,12 +16,12 @@ impl World {
     Default::default()
   }
 
-  pub fn manage_session(&mut self, s: Session) {
+  fn manage_session(&mut self, s: Session) {
     let id = s.id();
     self.sessions.insert(id, s);
     println!("managing session: {}", id);
   }
-  pub fn drop_session(&mut self, id: Uuid) {
+  fn drop_session(&mut self, id: Uuid) {
     self.sessions.remove(&id);
     println!("dropped session: {}", id);
   }
@@ -27,10 +29,10 @@ impl World {
   pub fn get_session(&self, id: Uuid) -> Option<&Session> {
     self.sessions.get(&id)
   }
-  */
   pub fn get_session_mut(&mut self, id: Uuid) -> Option<&mut Session> {
     self.sessions.get_mut(&id)
   }
+  */
 
 
   pub fn process(&mut self) -> Vec<ServerAction> {
@@ -54,5 +56,33 @@ impl World {
     }
 
     server_actions
+  }
+
+
+  pub fn run(&mut self, mut server: Server) -> Result<(), Box<dyn Error>> {
+    loop {
+      let server_events = server.pump()?;
+
+      for event in server_events.iter() {
+        match event {
+          ServerEvent::Connect(sid) => {
+            let s = Session::new(*sid);
+            self.manage_session(s);
+          },
+          ServerEvent::Disconnect(sid) => {
+            self.drop_session(*sid);
+          },
+          ServerEvent::Read(sid, str) => {
+            if let Some(s) = self.sessions.get_mut(sid) {
+              s.queue_action(SessionAction::Input(str.to_string()));
+            }
+          },
+        }
+      }
+
+      let server_actions = self.process();
+
+      server.process_actions(server_actions)?;
+    }
   }
 }
