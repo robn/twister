@@ -35,54 +35,49 @@ impl World {
   */
 
 
-  pub fn process(&mut self) -> Vec<ServerAction> {
-    let mut world_actions = vec!();
-
-    for (_, s) in self.sessions.iter_mut() {
-      world_actions.append(&mut s.process_actions());
-    }
-
-    let mut server_actions = vec!();
-
-    for action in world_actions.iter() {
-      match action {
-        WorldAction::Wall(text) => {
-          println!("wall: {}", text);
-          for (id, _) in self.sessions.iter() {
-            server_actions.push(ServerAction::Write(*id, text.to_string()));
-          }
-        },
-      }
-    }
-
-    server_actions
-  }
-
-
   pub fn run(&mut self, mut server: Server) -> Result<(), Box<dyn Error>> {
     loop {
-      let server_events = server.pump()?;
 
-      for event in server_events.iter() {
+      // pump the server for events from connected clients
+      for event in server.pump()? {
         match event {
           ServerEvent::Connect(sid) => {
-            let s = Session::new(*sid);
+            let s = Session::new(sid);
             self.manage_session(s);
           },
           ServerEvent::Disconnect(sid) => {
-            self.drop_session(*sid);
+            self.drop_session(sid);
           },
           ServerEvent::Read(sid, str) => {
-            if let Some(s) = self.sessions.get_mut(sid) {
+            if let Some(s) = self.sessions.get_mut(&sid) {
               s.queue_action(SessionAction::Input(str.to_string()));
             }
           },
         }
       }
 
-      let server_actions = self.process();
+      // run all the sessions, and collect up the changes they want to make to the world
+      let mut world_actions = vec!();
+      for (_, s) in self.sessions.iter_mut() {
+        world_actions.append(&mut s.process_actions());
+      }
 
+      // apply actions to the world and collect up actions to take on connected clients
+      let mut server_actions = vec!();
+      for action in world_actions.iter() {
+        match action {
+          WorldAction::Wall(text) => {
+            println!("wall: {}", text);
+            for (id, _) in self.sessions.iter() {
+              server_actions.push(ServerAction::Write(*id, text.to_string()));
+            }
+          },
+        }
+      }
+
+      // apply actions to connected clients
       server.process_actions(server_actions)?;
     }
   }
+
 }
