@@ -57,23 +57,17 @@ impl World {
       }
 
       // run all the sessions, and collect up the changes they want to make to the world
-      let mut world_actions = vec!();
-      for (_, s) in self.sessions.iter_mut() {
-        world_actions.append(&mut s.process_actions());
-      }
+      let world_actions: Vec<WorldAction> = self.sessions.iter_mut().flat_map(|(_,s)| s.process_actions()).collect();
 
       // apply actions to the world and collect up actions to take on connected clients
-      let mut server_actions = vec!();
-      for action in world_actions.iter() {
+      let server_actions: Vec<ServerAction> = world_actions.iter().flat_map(|action|
         match action {
           WorldAction::Wall(text) => {
             println!("wall: {}", text);
-            for (id, _) in self.sessions.iter() {
-              server_actions.push(ServerAction::Write(*id, text.to_string()));
-            }
+            self.sessions.keys().map(|id| ServerAction::Write(*id, text.to_string())).collect::<Vec<ServerAction>>()
           },
         }
-      }
+      ).collect();
 
       // apply actions to connected clients
       server.process_actions(server_actions)?;
