@@ -16,10 +16,6 @@ impl Session {
     }
   }
 
-  pub fn id(&self) -> Uuid {
-    self.id
-  }
-
   pub fn queue_action(&mut self, action: SessionAction) {
     println!("session {} queued action: {:?}", self.id, action);
     self.actions.push(action);

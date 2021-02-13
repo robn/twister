@@ -16,25 +16,6 @@ impl World {
     Default::default()
   }
 
-  fn manage_session(&mut self, s: Session) {
-    let id = s.id();
-    self.sessions.insert(id, s);
-    println!("managing session: {}", id);
-  }
-  fn drop_session(&mut self, id: Uuid) {
-    self.sessions.remove(&id);
-    println!("dropped session: {}", id);
-  }
-  /*
-  pub fn get_session(&self, id: Uuid) -> Option<&Session> {
-    self.sessions.get(&id)
-  }
-  pub fn get_session_mut(&mut self, id: Uuid) -> Option<&mut Session> {
-    self.sessions.get_mut(&id)
-  }
-  */
-
-
   pub fn run(&mut self, mut server: Server) -> Result<(), Box<dyn Error>> {
     loop {
 
@@ -43,10 +24,12 @@ impl World {
         match event {
           ServerEvent::Connect(sid) => {
             let s = Session::new(sid);
-            self.manage_session(s);
+            self.sessions.insert(sid, s);
+            println!("managing session: {}", sid);
           },
           ServerEvent::Disconnect(sid) => {
-            self.drop_session(sid);
+            self.sessions.remove(&sid);
+            println!("dropped session: {}", sid);
           },
           ServerEvent::Read(sid, str) => {
             if let Some(s) = self.sessions.get_mut(&sid) {
