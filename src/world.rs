@@ -40,7 +40,7 @@ impl World {
       }
 
       // run all the sessions, and collect up the changes they want to make to the world
-      let world_actions: Vec<WorldAction> = self.sessions.iter_mut().flat_map(|(_,s)| s.process_actions()).collect();
+      let world_actions: Vec<WorldAction> = self.sessions.iter_mut().flat_map(|(_,s)| s.pump()).collect();
 
       // apply actions to the world and collect up actions to take on connected clients
       let server_actions: Vec<ServerAction> = world_actions.iter().flat_map(|action|

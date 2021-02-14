@@ -37,33 +37,37 @@ impl Session {
       },
     };
 
-    println!("session {} command: {:?}", self.id, command);
+    println!("session {} input command: {:?}", self.id, command);
 
     self.commands.push(command);
   }
 
-  pub fn process_actions(&mut self) -> Vec<WorldAction> {
-    /*
+  pub fn pump(&mut self) -> Vec<WorldAction> {
     let mut world_actions = vec!();
 
-    println!("session {} processing", self.id);
+    println!("session {} pump", self.id);
 
-    for action in self.commands.iter() {
-      println!("session {} process action: {:?}", self.id, action);
+    for command in &self.commands {
+      println!("session {} run command: {:?}", self.id, command);
 
-      match action {
+      match command {
+        Command::Empty         => {},
+        Command::Unknown(word) => {},
+        Command::Hello         => {},
+      }
+
+      /*
         SessionAction::Input(text) => {
           println!("session {} input: {}", self.id, text);
 
           world_actions.push(WorldAction::Wall(text.to_string()));
         },
       }
+      */
     }
 
-    self.actions.truncate(0);
+    self.commands.truncate(0);
 
     world_actions
-    */
-    vec!()
   }
 }
