@@ -59,8 +59,8 @@ impl Session {
 
       match command {
         Command::Empty         => {},
-        Command::Unknown(word) => {},
-        Command::Hello         => {},
+        Command::Unknown(word) => self.output.push(format!("Unknown command: {}", word)),
+        Command::Hello         => self.output.push("Hi!".to_string()),
       }
 
       /*
