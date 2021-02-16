@@ -1,6 +1,8 @@
 use uuid::Uuid;
+use std::io;
 
 use crate::message::WorldAction;
+use crate::server::Server;
 
 #[derive(Debug)]
 enum Command {
@@ -13,6 +15,7 @@ enum Command {
 pub struct Session {
   id:       Uuid,
   commands: Vec<Command>,
+  output:   Vec<String>,
 }
 
 impl Session {
@@ -42,6 +45,10 @@ impl Session {
     self.commands.push(command);
   }
 
+  pub fn output(&mut self, line: String) {
+    self.output.push(line);
+  }
+
   pub fn pump(&mut self) -> Vec<WorldAction> {
     let mut world_actions = vec!();
 
@@ -69,5 +76,12 @@ impl Session {
     self.commands.truncate(0);
 
     world_actions
+  }
+
+  pub fn update_server(&mut self, server: &mut Server) -> io::Result<()> {
+    for s in self.output.drain(0..) {
+      server.queue_write(self.id, &s)?;
+    }
+    Ok(())
   }
 }

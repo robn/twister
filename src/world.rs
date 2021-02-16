@@ -4,7 +4,7 @@ use std::error::Error;
 
 use crate::session::Session;
 use crate::server::Server;
-use crate::message::{WorldAction, ServerAction, ServerEvent};
+use crate::message::{WorldAction, ServerEvent};
 
 #[derive(Default)]
 pub struct World {
@@ -42,18 +42,20 @@ impl World {
       // run all the sessions, and collect up the changes they want to make to the world
       let world_actions: Vec<WorldAction> = self.sessions.iter_mut().flat_map(|(_,s)| s.pump()).collect();
 
-      // apply actions to the world and collect up actions to take on connected clients
-      let server_actions: Vec<ServerAction> = world_actions.iter().flat_map(|action|
+      // apply actions to the world
+      for action in world_actions {
         match action {
           WorldAction::Wall(text) => {
             println!("wall: {}", text);
-            self.sessions.keys().map(|id| ServerAction::Write(*id, text.to_string())).collect::<Vec<ServerAction>>()
+            self.sessions.iter_mut().for_each(|(_,s)| s.output(text.to_string()));
           },
         }
-      ).collect();
+      }
 
-      // apply actions to connected clients
-      server.process_actions(server_actions)?;
+      // format and queue session output into the server
+      for (_,s) in self.sessions.iter_mut() {
+        s.update_server(&mut server)?;
+      }
     }
   }
 

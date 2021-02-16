@@ -13,9 +13,3 @@ pub enum ServerEvent {
 pub enum WorldAction {
   Wall(String),
 }
-
-// things we want the server to do
-#[derive(Debug)]
-pub enum ServerAction {
-  Write(Uuid, String),
-}

@@ -5,7 +5,7 @@ use bimap::BiHashMap;
 use uuid::Uuid;
 use std::io::{self, Read, Write};
 
-use crate::message::{ServerEvent, ServerAction};
+use crate::message::ServerEvent;
 
 pub struct Server {
   poll:        Poll,
@@ -125,28 +125,12 @@ impl Server {
     Ok(events)
   }
 
-  pub fn process_actions(&mut self, actions: Vec<ServerAction>) -> io::Result<()> {
-    for action in actions {
-      match action {
-        ServerAction::Write(sid, str) => {
-          println!("session {} queued write: {}", sid, str);
+  pub fn queue_write(&mut self, sid: Uuid, s: &String) -> io::Result<()> {
+    let token = self.sid_map.get_by_right(&sid).unwrap();
 
-          let token = self.sid_map.get_by_right(&sid).unwrap();
-
-          let mut queue = match self.write_queue.remove(token) {
-            Some(v) => v,
-            None    => vec!(),
-          };
-
-          // XXX newlines hmm
-          queue.push((str.to_owned() + &"\r\n".to_string()).as_bytes().to_vec());
-          self.write_queue.insert(*token, queue);
-
-          if let Some(conn) = self.connections.get_mut(&token) {
-            self.poll.registry().reregister(&mut *conn, *token, Interest::READABLE.add(Interest::WRITABLE))?;
-          }
-        },
-      }
+    if let Some(conn) = self.connections.get_mut(&token) {
+      self.write_queue.entry(*token).or_insert(vec!()).push((s.to_owned() + &"\r\n".to_string()).as_bytes().to_vec());
+      self.poll.registry().reregister(&mut *conn, *token, Interest::READABLE.add(Interest::WRITABLE))?;
     }
 
     Ok(())
