@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use std::io;
 
-use crate::message::WorldAction;
+use crate::world::WorldAction;
 use crate::server::Server;
 
 #[derive(Debug)]

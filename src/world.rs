@@ -3,8 +3,12 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::session::Session;
-use crate::server::Server;
-use crate::message::{WorldAction, ServerEvent};
+use crate::server::{Server, ServerEvent};
+
+#[derive(Debug)]
+pub enum WorldAction {
+  Wall(String),
+}
 
 #[derive(Default)]
 pub struct World {

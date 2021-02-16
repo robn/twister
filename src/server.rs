@@ -5,7 +5,12 @@ use bimap::BiHashMap;
 use uuid::Uuid;
 use std::io::{self, Read, Write};
 
-use crate::message::ServerEvent;
+#[derive(Debug)]
+pub enum ServerEvent {
+  Connect(Uuid),
+  Disconnect(Uuid),
+  Read(Uuid, String),
+}
 
 pub struct Server {
   poll:        Poll,

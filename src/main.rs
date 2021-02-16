@@ -1,4 +1,3 @@
-mod message;
 //mod channel;
 mod session;
 mod world;
