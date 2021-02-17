@@ -1,8 +1,10 @@
 use uuid::Uuid;
 use std::io;
+use friendly_zoo::Zoo;
 
 use crate::world::WorldAction;
 use crate::server::Server;
+use crate::types::Named;
 
 #[derive(Debug)]
 enum Command {
@@ -16,16 +18,20 @@ enum Command {
 #[derive(Default)]
 pub struct Session {
   id:       Uuid,
+  name:     String,
   commands: Vec<Command>,
   output:   Vec<String>,
 }
 
 impl Session {
   pub fn new(sid: Uuid) -> Self {
-    Session {
+    let mut s = Session {
       id: sid,
+      name: Zoo::default().generate(),
       ..Default::default()
-    }
+    };
+    s.output(format!("Your name: {}", s.name));
+    s
   }
 
   pub fn input(&mut self, line: String) {
@@ -91,5 +97,11 @@ impl Session {
       server.queue_write(self.id, &s)?;
     }
     Ok(())
+  }
+}
+
+impl Named for Session {
+  fn name(&self) -> &String {
+    &self.name
   }
 }

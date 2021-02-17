@@ -4,6 +4,7 @@ use std::error::Error;
 
 use crate::session::Session;
 use crate::server::{Server, ServerEvent};
+use crate::types::Named;
 
 #[derive(Debug)]
 pub enum WorldAction {
@@ -14,6 +15,7 @@ pub enum WorldAction {
 #[derive(Default)]
 pub struct World {
   sessions: HashMap<Uuid,Session>,
+  sid_by_name: HashMap<String,Uuid>,
 }
 
 impl World {
@@ -29,12 +31,15 @@ impl World {
         match event {
           ServerEvent::Connect(sid) => {
             let s = Session::new(sid);
+            println!("managing session: {} [{}]", sid, s.name());
+            self.sid_by_name.insert(s.name().to_string(), sid);
             self.sessions.insert(sid, s);
-            println!("managing session: {}", sid);
           },
           ServerEvent::Disconnect(sid) => {
-            self.sessions.remove(&sid);
-            println!("dropped session: {}", sid);
+            if let Some(s) = self.sessions.remove(&sid) {
+              println!("dropped session: {} [{}]", sid, s.name());
+              self.sid_by_name.remove(s.name());
+            }
           },
           ServerEvent::Read(sid, line) => {
             if let Some(s) = self.sessions.get_mut(&sid) {
@@ -56,9 +61,15 @@ impl World {
           },
           WorldAction::Tell(ref sid, ref to, text) => {
             println!("tell: {} {} {}", sid, to, text);
-            match self.sessions.get_mut(&Uuid::parse_str(to).unwrap()) {
-              Some(s) => s.output(format!("<{}> {}", sid, text)),
-              None    => self.sessions.get_mut(sid).unwrap().output(format!("tell: {} isn't online right now.", to)),
+            match self.sid_by_name.get(to) {
+              None => {
+                self.sessions.get_mut(sid).unwrap().output(format!("tell: {} isn't online right now.", to));
+              },
+              Some(to_sid) => {
+                let from = self.sessions.get_mut(sid).unwrap().name().to_string();
+                let s = self.sessions.get_mut(to_sid).unwrap();
+                s.output(format!("<{}> {}", from, text));
+              }
             }
           },
         }
