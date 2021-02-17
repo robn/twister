@@ -8,6 +8,8 @@ use crate::server::Server;
 enum Command {
   Empty,
   Hello,
+  Tell(String, String),
+  Error(String),
   Unknown(String),
 }
 
@@ -35,6 +37,10 @@ impl Session {
         let args: Vec<String> = iter.map(|s| s.to_string()).collect();
         match word.to_lowercase().as_ref() {
           "hello" => Command::Hello,
+          "tell"  => match args.len() {
+              n if n < 2 => Command::Error(format!("try: tell [who] [what...]")),
+              _             => Command::Tell(args[0].to_string(), args[1..].join(" ")),
+          },
           _       => Command::Unknown(word.to_string()),
         }
       },
@@ -58,9 +64,11 @@ impl Session {
       println!("session {} run command: {:?}", self.id, command);
 
       match command {
-        Command::Empty         => {},
-        Command::Unknown(word) => self.output.push(format!("Unknown command: {}", word)),
-        Command::Hello         => self.output.push("Hi!".to_string()),
+        Command::Empty          => {},
+        Command::Error(text)    => self.output.push(text.to_string()),
+        Command::Unknown(word)  => self.output.push(format!("Unknown command: {}", word)),
+        Command::Hello          => self.output.push("Hi!".to_string()),
+        Command::Tell(to, text) => world_actions.push(WorldAction::Tell(self.id, to.to_string(), text.to_string())),
       }
 
       /*

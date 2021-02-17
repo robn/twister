@@ -8,6 +8,7 @@ use crate::server::{Server, ServerEvent};
 #[derive(Debug)]
 pub enum WorldAction {
   Wall(String),
+  Tell(Uuid, String, String),
 }
 
 #[derive(Default)]
@@ -52,6 +53,13 @@ impl World {
           WorldAction::Wall(text) => {
             println!("wall: {}", text);
             self.sessions.iter_mut().for_each(|(_,s)| s.output(text.to_string()));
+          },
+          WorldAction::Tell(ref sid, ref to, text) => {
+            println!("tell: {} {} {}", sid, to, text);
+            match self.sessions.get_mut(&Uuid::parse_str(to).unwrap()) {
+              Some(s) => s.output(format!("<{}> {}", sid, text)),
+              None    => self.sessions.get_mut(sid).unwrap().output(format!("tell: {} isn't online right now.", to)),
+            }
           },
         }
       }
