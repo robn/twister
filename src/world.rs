@@ -4,7 +4,6 @@ use std::error::Error;
 
 use crate::session::Session;
 use crate::server::{Server, ServerEvent};
-use crate::types::Named;
 
 #[derive(Debug)]
 pub enum WorldAction {

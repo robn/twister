@@ -4,7 +4,6 @@ use friendly_zoo::Zoo;
 
 use crate::world::WorldAction;
 use crate::server::Server;
-use crate::types::Named;
 
 #[derive(Debug)]
 enum Command {
@@ -32,6 +31,10 @@ impl Session {
     };
     s.output(format!("Your name: {}", s.name));
     s
+  }
+
+  pub fn name(&self) -> &String {
+    &self.name
   }
 
   pub fn input(&mut self, line: String) {
@@ -97,11 +100,5 @@ impl Session {
       server.queue_write(self.id, &s)?;
     }
     Ok(())
-  }
-}
-
-impl Named for Session {
-  fn name(&self) -> &String {
-    &self.name
   }
 }

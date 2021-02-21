@@ -2,7 +2,6 @@
 mod session;
 mod world;
 mod server;
-mod types;
 
 use crate::world::World;
 use crate::server::Server;
