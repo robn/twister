@@ -1,19 +1,27 @@
 //mod channel;
-mod session;
-mod world;
+//mod session;
+//mod world;
 mod server;
+mod component;
+mod lobby;
 
-use crate::world::World;
+//use crate::world::World;
 use crate::server::Server;
 
 use std::error::Error;
 
+use hecs::*;
+
 fn main() -> Result<(), Box<dyn Error>> {
   let mut world = World::new();
 
-  let server = Server::new()?;
+  let mut server = Server::new()?;
 
-  world.run(server)
+  loop {
+    server.update(&mut world)?;
+
+    lobby::update(&mut world);
+  }
 }
 
     /*

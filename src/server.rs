@@ -2,23 +2,23 @@ use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
 use bimap::BiHashMap;
-use uuid::Uuid;
 use std::io::{self, Read, Write};
 
-#[derive(Debug)]
-pub enum ServerEvent {
-  Connect(Uuid),
-  Disconnect(Uuid),
-  Read(Uuid, String),
+use crate::component::{LineIO,Lobby};
+
+use hecs::*;
+
+struct Session {
+  conn:  TcpStream,
+  queue: Vec<Vec<u8>>,
 }
 
 pub struct Server {
-  poll:        Poll,
-  listener:    TcpListener,
-  token:       Token,
-  connections: HashMap<Token,TcpStream>,
-  sid_map:     BiHashMap<Token,Uuid>,
-  write_queue: HashMap<Token,Vec<Vec<u8>>>,
+  poll:         Poll,
+  listener:     TcpListener,
+  token:        Token,
+  sessions:     HashMap<Token,Session>,
+  token_entity: BiHashMap<Token,Entity>
 }
 
 impl Server {
@@ -26,12 +26,11 @@ impl Server {
     let addr = "127.0.0.1:3000".parse().unwrap();
 
     let mut server = Server {
-      poll:        Poll::new()?,
-      listener:    TcpListener::bind(addr)?,
-      token:       Token(1),
-      connections: HashMap::new(),
-      sid_map:     BiHashMap::new(),
-      write_queue: HashMap::new(),
+      poll:         Poll::new()?,
+      listener:     TcpListener::bind(addr)?,
+      token:        Token(1),
+      sessions:     HashMap::new(),
+      token_entity: BiHashMap::new(),
     };
 
     server.poll.registry().register(&mut server.listener, Token(0), Interest::READABLE)?;
@@ -39,14 +38,12 @@ impl Server {
     Ok(server)
   }
 
-  pub fn pump(&mut self) -> io::Result<Vec<ServerEvent>> {
-    let mut events: Vec<ServerEvent> = vec!();
+  pub fn update(&mut self, world: &mut World) -> io::Result<()> {
+    let mut events = Events::with_capacity(128);
 
-    let mut io_events = Events::with_capacity(128);
+    self.poll.poll(&mut events, None)?;
 
-    self.poll.poll(&mut io_events, None)?;
-
-    for event in io_events.iter() {
+    for event in events.iter() {
       match event.token() {
 
         // listening socket
@@ -55,21 +52,30 @@ impl Server {
           // no more connections, go for next event
           Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
 
-          // propogate any other error
+          // propagate any other error
           Err(e) => return Err(e),
 
           // new connection
           Ok((mut conn, addr)) => {
-            println!("accepted connection: {}", addr);
-
             self.token = Token(self.token.0 + 1);
             self.poll.registry().register(&mut conn, self.token, Interest::READABLE.add(Interest::WRITABLE))?;
-            self.connections.insert(self.token, conn);
+            self.sessions.insert(self.token, Session {
+              conn:  conn,
+              queue: vec!(),
+            });
 
-            let sid = Uuid::new_v4();
-            self.sid_map.insert(self.token, sid);
+            println!("connected [{:?}]: {}", self.token, addr);
 
-            events.push(ServerEvent::Connect(sid));
+            // start them in the lobby
+            let entity = world.spawn((
+              LineIO {
+                input:  vec!(),
+                output: vec!(),
+              },
+              Lobby::Start,
+            ));
+            
+            self.token_entity.insert(self.token, entity);
           }
         },
 
@@ -77,31 +83,30 @@ impl Server {
         token => {
           if event.is_writable() {
             // XXX all kinda shit. mostly, what do errors even mean?
-            if let Some(queue) = self.write_queue.remove(&token) {
-              if let Some(conn) = self.connections.get_mut(&token) {
-                for data in queue {
-                  match conn.write(&data) {
-                    Ok(n) if n < data.len() => return Err(io::ErrorKind::WriteZero.into()),
-                    Ok(_) => self.poll.registry().reregister(&mut *conn, token, Interest::READABLE)?,
-                    Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
-                    Err(e) => return Err(e),
-                  }
+            if let Some(session) = self.sessions.get_mut(&token) {
+              for data in session.queue.drain(0..) {
+                match session.conn.write(&data) {
+                  Ok(n) if n < data.len() => return Err(io::ErrorKind::WriteZero.into()),
+                  Ok(_) => self.poll.registry().reregister(&mut session.conn, token, Interest::READABLE)?,
+                  Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
+                  Err(e) => return Err(e),
                 }
               }
             }
           }
 
           if event.is_readable() {
-            if let Some(conn) = self.connections.get_mut(&token) {
+            if let Some(session) = self.sessions.get_mut(&token) {
               let mut buf = vec![0; 4096];
-              match conn.read(&mut buf) {
+              match session.conn.read(&mut buf) {
                 Ok(0) => {
                   // disconnected
-                  println!("disconnected: {}", conn.peer_addr()?);
-                  self.connections.remove(&token);
+                  println!("disconnected: [{:?}] {}", token, session.conn.peer_addr()?);
+                  self.sessions.remove(&token);
 
-                  let (_, sid) = self.sid_map.remove_by_left(&token).unwrap();
-                  events.push(ServerEvent::Disconnect(sid));
+                  if let Some((_, entity)) = self.token_entity.remove_by_left(&token) {
+                    // XXX world despawn
+                  }
                 },
 
                 Ok(n) => {
@@ -109,10 +114,14 @@ impl Server {
                   // XXX non-utf8?
                   // XXX incomplete lines?
                   if let Ok(str) = std::str::from_utf8(&buf[..n]) {
-                    let sid = self.sid_map.get_by_left(&token).unwrap();
-
                     for line in str.lines() {
-                      events.push(ServerEvent::Read(*sid, line.trim().to_string()));
+                      println!("input [{:?}]: {}", token, line.trim().to_string());
+                      if let Some(entity) = self.token_entity.get_by_left(&token) {
+                        if let Ok(mut io) = world.get_mut::<LineIO>(*entity) {
+                          io.input.push(line.trim().to_string());
+                          println!("{:?}", *io);
+                        }
+                      }
                     }
                   }
 
@@ -127,9 +136,10 @@ impl Server {
       };
     }
 
-    Ok(events)
+    Ok(())
   }
 
+/*
   pub fn queue_write(&mut self, sid: Uuid, s: &String) -> io::Result<()> {
     let token = self.sid_map.get_by_right(&sid).unwrap();
 
@@ -140,4 +150,5 @@ impl Server {
 
     Ok(())
   }
+*/
 }
