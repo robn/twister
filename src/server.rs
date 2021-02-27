@@ -1,6 +1,6 @@
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use bimap::BiHashMap;
 use std::io::{self, Read, Write};
 
@@ -84,8 +84,8 @@ impl Server {
             // start them in the lobby
             let entity = world.spawn((
               LineIO {
-                input:  vec!(),
-                output: vec!(),
+                input:  VecDeque::new(),
+                output: VecDeque::new(),
               },
               Lobby::Start,
             ));
@@ -133,7 +133,7 @@ impl Server {
                       println!("input [{:?}]: {}", token, line.trim().to_string());
                       if let Some(entity) = self.token_entity.get_by_left(&token) {
                         if let Ok(mut io) = world.get_mut::<LineIO>(*entity) {
-                          io.input.push(line.trim().to_string());
+                          io.input.push_back(line.trim().to_string());
                           println!("{:?}", *io);
                         }
                       }
