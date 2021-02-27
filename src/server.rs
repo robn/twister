@@ -39,6 +39,21 @@ impl Server {
   }
 
   pub fn update(&mut self, world: &mut World) -> io::Result<()> {
+
+    // prepare output and ask for write events
+    for (entity, io) in world.query::<&mut LineIO>().iter() {
+      if io.output.len() > 0 {
+        if let Some(token) = self.token_entity.get_by_right(&entity) {
+          if let Some(session) = self.sessions.get_mut(token) {
+            session.queue.extend(
+              io.output.drain(0..).map(|s| (s.to_owned() + &"\r\n".to_string()).as_bytes().to_vec())
+            );
+            self.poll.registry().reregister(&mut session.conn, *token, Interest::READABLE.add(Interest::WRITABLE))?;
+          }
+        }
+      }
+    }
+
     let mut events = Events::with_capacity(128);
 
     self.poll.poll(&mut events, None)?;
@@ -138,17 +153,4 @@ impl Server {
 
     Ok(())
   }
-
-/*
-  pub fn queue_write(&mut self, sid: Uuid, s: &String) -> io::Result<()> {
-    let token = self.sid_map.get_by_right(&sid).unwrap();
-
-    if let Some(conn) = self.connections.get_mut(&token) {
-      self.write_queue.entry(*token).or_insert(vec!()).push((s.to_owned() + &"\r\n".to_string()).as_bytes().to_vec());
-      self.poll.registry().reregister(&mut *conn, *token, Interest::READABLE.add(Interest::WRITABLE))?;
-    }
-
-    Ok(())
-  }
-*/
 }
