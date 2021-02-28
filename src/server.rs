@@ -130,11 +130,9 @@ impl Server {
                   // XXX incomplete lines?
                   if let Ok(str) = std::str::from_utf8(&buf[..n]) {
                     for line in str.lines() {
-                      println!("input [{:?}]: {}", token, line.trim().to_string());
                       if let Some(entity) = self.token_entity.get_by_left(&token) {
                         if let Ok(mut io) = world.get_mut::<LineIO>(*entity) {
                           io.input.push_back(line.trim().to_string());
-                          println!("{:?}", *io);
                         }
                       }
                     }
