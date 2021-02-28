@@ -2,23 +2,42 @@ use hecs::*;
 use crate::component::*;
 
 pub fn update(world: &mut World) {
-  for (_, (io, state)) in world.query::<(&mut LineIO, &mut Lobby)>().iter() {
-    match state {
+  let to_promote: Vec<_> = world.query::<(&mut LineIO, &mut Lobby)>()
+    .iter()
+    .filter_map(|(entity, (io, state))| {
+      match state {
 
-      Lobby::Start => {
-        io.output.push_back("oh hey".to_string());
-        io.output.push_back("what name?".to_string());
-        *state = Lobby::Username;
-      },
+        Lobby::Start => {
+          io.output.push_back("oh hey".to_string());
+          io.output.push_back("what name?".to_string());
+          *state = Lobby::Username;
+          None
+        },
 
-      Lobby::Username => {
-        if let Some(username) = io.input.pop_front() {
-          io.output.push_back(format!("yeah hi {}", username));
-          *state = Lobby::End;
-        }
+        Lobby::Username => {
+          if let Some(username) = io.input.pop_front() {
+            io.output.push_back(format!("yeah hi {}", username));
+            *state = Lobby::End(username);
+          }
+          None
+        },
+
+        Lobby::End(username) => {
+          Some((entity, username.to_string()))
+        },
       }
+    })
+    .collect();
 
-      Lobby::End => {},
-    }
-  }
+  to_promote.iter().for_each(|(entity, username)| {
+    println!("promote {:?}", entity);
+
+    // remove from lobby
+    world.remove_one::<Lobby>(*entity).ok();
+
+    // add to main world
+    world.insert(*entity, (
+      Name(username.to_string()),
+    )).ok();
+  });
 }

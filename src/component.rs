@@ -10,5 +10,8 @@ pub struct LineIO {
 pub enum Lobby {
   Start,
   Username,
-  End,
+  End(String),
 }
+
+#[derive(Debug)]
+pub struct Name(pub String);
