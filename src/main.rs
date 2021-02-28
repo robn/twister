@@ -4,6 +4,7 @@
 mod server;
 mod component;
 mod lobby;
+mod command;
 
 //use crate::world::World;
 use crate::server::Server;
@@ -21,6 +22,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     server.update(&mut world)?;
 
     lobby::update(&mut world);
+
+    command::update(&mut world);
   }
 }
 
