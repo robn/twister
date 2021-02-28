@@ -3,6 +3,7 @@ use mio::{Events, Interest, Poll, Token};
 use std::collections::{HashMap, VecDeque};
 use bimap::BiHashMap;
 use std::io::{self, Read, Write};
+use std::time::Duration;
 
 use crate::component::{LineIO,Lobby};
 
@@ -56,7 +57,7 @@ impl Server {
 
     let mut events = Events::with_capacity(128);
 
-    self.poll.poll(&mut events, None)?;
+    self.poll.poll(&mut events, Some(Duration::from_millis(1000)))?;
 
     for event in events.iter() {
       match event.token() {
