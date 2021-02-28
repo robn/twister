@@ -1,12 +1,8 @@
-//mod channel;
-//mod session;
-//mod world;
 mod server;
 mod component;
 mod lobby;
 mod command;
 
-//use crate::world::World;
 use crate::server::Server;
 
 use std::error::Error;
