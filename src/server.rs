@@ -42,7 +42,7 @@ impl Server {
   pub fn update(&mut self, world: &mut World) -> io::Result<()> {
 
     // prepare output and ask for write events
-    for (entity, io) in world.query::<&mut LineIO>().iter() {
+    for (entity, io) in world.query_mut::<&mut LineIO>() {
       if io.output.len() > 0 {
         if let Some(token) = self.token_entity.get_by_right(&entity) {
           if let Some(session) = self.sessions.get_mut(token) {

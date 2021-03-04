@@ -2,8 +2,8 @@ use hecs::*;
 use crate::component::*;
 
 pub fn update(world: &mut World) {
-  let to_promote: Vec<_> = world.query::<(&mut LineIO, &mut Lobby)>()
-    .iter()
+  let to_promote: Vec<_> = world.query_mut::<(&mut LineIO, &mut Lobby)>()
+    .into_iter()
     .filter_map(|(entity, (io, state))| {
       match state {
 

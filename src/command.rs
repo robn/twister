@@ -11,8 +11,8 @@ enum Command {
 
 pub fn update(world: &mut World) {
   // a player has IO and a name
-  let commands: Vec<(Entity, Command)> = world.query::<With<Name, &mut LineIO>>()
-    .iter()
+  let commands: Vec<(Entity, Command)> = world.query_mut::<With<Name, &mut LineIO>>()
+    .into_iter()
     .flat_map(|(entity, io)| {
       io.input.drain(0..).flat_map(move |line| {
         let mut iter = line.split_whitespace();
