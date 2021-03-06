@@ -29,6 +29,16 @@ pub fn update(world: &mut World) {
     })
     .collect();
 
+  let wall_entity: Option<Entity> = world.query_mut::<With<Channel, &Name>>()
+    .into_iter()
+    .filter_map(|(entity, name)| {
+      match name.0 == "wall" {
+        true  => Some(entity),
+        false => None,
+      }
+    })
+    .next();
+
   to_promote.iter().for_each(|(entity, username)| {
     println!("promote {:?}", entity);
 
@@ -39,5 +49,12 @@ pub fn update(world: &mut World) {
     world.insert(*entity, (
       Name(username.to_string()),
     )).ok();
+
+    // post channel join event
+    if let Some(e) = wall_entity {
+      world.spawn((
+        ChannelEvent::Join(e, *entity),
+      ));
+    }
   });
 }

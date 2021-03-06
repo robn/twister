@@ -2,15 +2,23 @@ mod server;
 mod component;
 mod lobby;
 mod command;
+mod channel;
 
 use crate::server::Server;
+use crate::component::{Name,Channel};
 
 use std::error::Error;
+use std::collections::HashSet;
 
 use hecs::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
   let mut world = World::new();
+
+  world.spawn((
+    Name("wall".to_string()),
+    Channel { members: HashSet::new() },
+  ));
 
   let mut server = Server::new()?;
 
@@ -20,6 +28,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     lobby::update(&mut world);
 
     command::update(&mut world);
+
+    channel::update(&mut world);
   }
 }
 
