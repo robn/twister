@@ -1,34 +1,42 @@
 use hecs::*;
 use crate::component::*;
+use crate::action::Action;
 
-pub fn update(world: &mut World) {
-  let to_promote: Vec<_> = world.query_mut::<(&mut LineIO, &mut Lobby)>()
+pub fn update(world: &mut World) -> Vec<Action> {
+  world.query_mut::<(&mut LineIO, &mut Connection)>()
     .into_iter()
     .filter_map(|(entity, (io, state))| {
       match state {
 
-        Lobby::Start => {
-          io.output.push_back("oh hey".to_string());
+        Connection::Connected => {
+          io.output.push_back("oh hey this would be the banner or something".to_string());
+          *state = Connection::Welcome;
+          None
+        },
+
+        Connection::Welcome => {
           io.output.push_back("what name?".to_string());
-          *state = Lobby::Username;
+          *state = Connection::Username;
           None
         },
 
-        Lobby::Username => {
-          if let Some(username) = io.input.pop_front() {
-            io.output.push_back(format!("yeah hi {}", username));
-            *state = Lobby::End(username);
+        Connection::Username => {
+          match io.input.pop_front() {
+            Some(username) => {
+              io.output.push_back(format!("yeah hi {}", username));
+              *state = Connection::Online;
+              Some(Action::SetName(entity, username))
+            },
+            None => None,
           }
-          None
         },
 
-        Lobby::End(username) => {
-          Some((entity, username.to_string()))
-        },
+        _ => None,
       }
     })
-    .collect();
+    .collect()
 
+  /*
   let wall_entity: Option<Entity> = world.query_mut::<With<Channel, &Name>>()
     .into_iter()
     .filter_map(|(entity, name)| {
@@ -57,4 +65,5 @@ pub fn update(world: &mut World) {
       ));
     }
   });
+  */
 }

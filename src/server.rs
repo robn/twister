@@ -5,7 +5,7 @@ use bimap::BiHashMap;
 use std::io::{self, Read, Write};
 use std::time::Duration;
 
-use crate::component::{LineIO,Lobby};
+use crate::component::{LineIO,Connection};
 
 use hecs::*;
 
@@ -88,7 +88,7 @@ impl Server {
                 input:  VecDeque::new(),
                 output: VecDeque::new(),
               },
-              Lobby::Start,
+              Connection::Connected,
             ));
             
             self.token_entity.insert(self.token, entity);

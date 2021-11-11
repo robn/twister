@@ -1,11 +1,13 @@
 mod server;
 mod component;
-mod lobby;
+mod action;
+mod connection;
 mod command;
 mod channel;
 
 use crate::server::Server;
 use crate::component::{Name,Channel};
+use crate::action::Action;
 
 use std::error::Error;
 use std::collections::HashSet;
@@ -25,11 +27,15 @@ fn main() -> Result<(), Box<dyn Error>> {
   loop {
     server.update(&mut world)?;
 
-    lobby::update(&mut world);
+    let mut actions: Vec<Action> = vec!();
 
-    command::update(&mut world);
+    actions.append(&mut connection::update(&mut world));
 
-    channel::update(&mut world);
+    actions.append(&mut command::update(&mut world));
+
+    //channel::update(&mut world);
+
+    action::apply(&mut world, actions);
   }
 }
 
