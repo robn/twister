@@ -15,6 +15,10 @@ pub fn update(world: &mut World) -> Vec<Action> {
           Some(word) => {
             let args: Vec<String> = iter.map(|s| s.to_string()).collect();
             match word.to_lowercase().as_ref() {
+              "tell"  => match args.len() {
+                n if n < 2 => Some(Action::Output(entity, format!("try: tell [who] [what...]"))),
+                _          => Some(Action::Tell(entity, args[0].to_string(), args[1..].join(" "))),
+              },
               "hello" => Some(Action::Hello(entity)),
               _ => None,
             }
