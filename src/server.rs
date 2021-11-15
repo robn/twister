@@ -5,9 +5,10 @@ use bimap::BiHashMap;
 use std::io::{self, Read, Write};
 use std::time::Duration;
 
-use crate::component::{LineIO,Connection};
+use crate::global::Global;
 
 use hecs::*;
+use crate::component::{LineIO,Connection};
 
 struct Session {
   conn:  TcpStream,
@@ -39,10 +40,10 @@ impl Server {
     Ok(server)
   }
 
-  pub fn update(&mut self, world: &mut World) -> io::Result<()> {
+  pub fn update(&mut self, g: &mut Global) -> io::Result<()> {
 
     // prepare output and ask for write events
-    for (entity, io) in world.query_mut::<&mut LineIO>() {
+    for (entity, io) in g.world.query_mut::<&mut LineIO>() {
       if io.output.len() > 0 {
         if let Some(token) = self.token_entity.get_by_right(&entity) {
           if let Some(session) = self.sessions.get_mut(token) {
@@ -83,7 +84,7 @@ impl Server {
             println!("connected [{:?}]: {}", self.token, addr);
 
             // start them in the lobby
-            let entity = world.spawn((
+            let entity = g.world.spawn((
               LineIO {
                 input:  VecDeque::new(),
                 output: VecDeque::new(),
@@ -132,7 +133,7 @@ impl Server {
                   if let Ok(str) = std::str::from_utf8(&buf[..n]) {
                     for line in str.lines() {
                       if let Some(entity) = self.token_entity.get_by_left(&token) {
-                        if let Ok(mut io) = world.get_mut::<LineIO>(*entity) {
+                        if let Ok(mut io) = g.world.get_mut::<LineIO>(*entity) {
                           io.input.push_back(line.trim().to_string());
                         }
                       }

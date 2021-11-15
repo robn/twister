@@ -1,9 +1,11 @@
 use hecs::*;
 use crate::component::*;
+
+use crate::global::Global;
 use crate::action::Action;
 
-pub fn update(world: &mut World) -> Vec<Action> {
-  world.query_mut::<(&mut LineIO, &mut Connection)>()
+pub fn update(g: &mut Global) -> Vec<Action> {
+  g.world.query_mut::<(&mut LineIO, &mut Connection)>()
     .into_iter()
     .filter_map(|(entity, (io, state))| {
       match state {

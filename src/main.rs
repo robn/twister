@@ -4,20 +4,25 @@ mod action;
 mod connection;
 mod command;
 mod channel;
+mod global;
 
+use crate::global::Global;
 use crate::server::Server;
-use crate::component::{Name,Channel};
 use crate::action::Action;
 
 use std::error::Error;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use hecs::*;
+use crate::component::{Name,Channel};
 
 fn main() -> Result<(), Box<dyn Error>> {
-  let mut world = World::new();
+  let mut g = Global {
+    world:   World::new(),
+    catalog: HashMap::new(),
+  };
 
-  world.spawn((
+  g.world.spawn((
     Name("wall".to_string()),
     Channel { members: HashSet::new() },
   ));
@@ -25,17 +30,17 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut server = Server::new()?;
 
   loop {
-    server.update(&mut world)?;
+    server.update(&mut g)?;
 
     let mut actions: Vec<Action> = vec!();
 
-    actions.append(&mut connection::update(&mut world));
+    actions.append(&mut connection::update(&mut g));
 
-    actions.append(&mut command::update(&mut world));
+    actions.append(&mut command::update(&mut g));
 
-    //channel::update(&mut world);
+    //channel::update(&mut g);
 
-    action::apply(&mut world, actions);
+    action::apply(&mut g, actions);
   }
 }
 

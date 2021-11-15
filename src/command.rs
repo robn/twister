@@ -1,10 +1,12 @@
 use hecs::*;
 use crate::component::*;
+
+use crate::global::Global;
 use crate::action::Action;
 
-pub fn update(world: &mut World) -> Vec<Action> {
+pub fn update(g: &mut Global) -> Vec<Action> {
   // a player has IO and a name
-  world.query_mut::<With<Name, &mut LineIO>>()
+  g.world.query_mut::<With<Name, &mut LineIO>>()
     .into_iter()
     .flat_map(|(entity, io)| {
       io.input.drain(0..).flat_map(move |line| {

@@ -1,6 +1,8 @@
 use hecs::*;
 use crate::component::*;
 
+use crate::global::Global;
+
 #[derive(Debug)]
 pub enum Action {
   SetName(Entity, String), // add or replace a Name component
@@ -12,7 +14,7 @@ pub enum Action {
   Hello(Entity),
 }
 
-pub fn apply(world: &mut World, actions: Vec<Action>) {
+pub fn apply(g: &mut Global, actions: Vec<Action>) {
   println!("{:#?}", actions);
 
   actions
@@ -21,20 +23,20 @@ pub fn apply(world: &mut World, actions: Vec<Action>) {
       match action {
 
         Action::SetName(entity, username) => {
-          world.insert(*entity, (
+          g.world.insert(*entity, (
             Name(username.to_string()),
           )).ok();
         },
 
         Action::Output(entity, text) => {
-          if let Some(mut io) = world.get_mut::<LineIO>(*entity).ok() {
+          if let Some(mut io) = g.world.get_mut::<LineIO>(*entity).ok() {
             io.output.push_back(text.to_string());
           }
         },
 
         Action::Tell(entity, who, text) => {
           // XXX this is stupid and I want a real name->entity lookup but this is fine for now
-          let n_told = world.query_mut::<(&Name, &mut LineIO)>()
+          let n_told = g.world.query_mut::<(&Name, &mut LineIO)>()
             .into_iter()
             .flat_map(|(e, (name, io))| {
               if name.0 == *who {
@@ -48,14 +50,14 @@ pub fn apply(world: &mut World, actions: Vec<Action>) {
             .collect::<Vec<()>>()
             .len();
           if n_told == 0 {
-            if let Some(mut io) = world.get_mut::<LineIO>(*entity).ok() {
+            if let Some(mut io) = g.world.get_mut::<LineIO>(*entity).ok() {
               io.output.push_back("not found".to_string());
             }
           }
         }
 
         Action::Hello(entity) => {
-          if let Some(mut io) = world.get_mut::<LineIO>(*entity).ok() {
+          if let Some(mut io) = g.world.get_mut::<LineIO>(*entity).ok() {
             io.output.push_back("hello!".to_string());
           }
         },
