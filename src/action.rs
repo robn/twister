@@ -26,6 +26,7 @@ pub fn apply(g: &mut Global, actions: Vec<Action>) {
           g.world.insert(*entity, (
             Name(username.to_string()),
           )).ok();
+          g.catalog.insert(username.to_string(), *entity);
         },
 
         Action::Output(entity, text) => {
@@ -35,24 +36,17 @@ pub fn apply(g: &mut Global, actions: Vec<Action>) {
         },
 
         Action::Tell(entity, who, text) => {
-          // XXX this is stupid and I want a real name->entity lookup but this is fine for now
-          let n_told = g.world.query_mut::<(&Name, &mut LineIO)>()
-            .into_iter()
-            .flat_map(|(e, (name, io))| {
-              if name.0 == *who {
+          match g.catalog.get(who) {
+            Some(e) => {
+              if let Some(mut io) = g.world.get_mut::<LineIO>(*e).ok() {
                 io.output.push_back(text.to_string());
-                Some(())
               }
-              else {
-                None
+            },
+            None => {
+              if let Some(mut io) = g.world.get_mut::<LineIO>(*entity).ok() {
+                io.output.push_back("not found".to_string());
               }
-            })
-            .collect::<Vec<()>>()
-            .len();
-          if n_told == 0 {
-            if let Some(mut io) = g.world.get_mut::<LineIO>(*entity).ok() {
-              io.output.push_back("not found".to_string());
-            }
+            },
           }
         }
 
