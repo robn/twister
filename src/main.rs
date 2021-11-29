@@ -29,6 +29,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   let mut server = Server::new()?;
 
+  // I think the main loop is like:
+  //
+  // - run each system's update(). each run gets an immutable handle to the global data (world,
+  //   catalog, etc).  it does lookups and whatever else to decide what to do, and returns a list of
+  //   "actions", which are just enum values carrying the modification to be made
+  //
+  // - run each system's apply(), which gets a mutable handle to the global data, and the action
+  //   list. it can make appropriate changes to the world for the given action, if it cares
+  //
+  // the idea is, sometimes multiple systems will need to respond to an action (eg "user quit", which
+  // might see a channel/group remove that user and the server do a disconnect. but calling a
+  // "user_quit()" method from inside update means we're likely to already have a reference out for
+  // the world at the time we need to modify it, which isn't going to work and necessitates a
+  // two-step process anyway within the system, but then would also mean that the action function
+  // would have to know about multiple systems anyway. so "collect, then apply" seems to be a
+  // simple generalisation of the idea.
+
   loop {
     server.update(&mut g)?;
 
