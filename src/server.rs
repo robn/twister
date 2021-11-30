@@ -6,6 +6,8 @@ use std::io::{self, Read, Write};
 use std::time::Duration;
 
 use crate::global::Global;
+use crate::system::System;
+use crate::action::Action;
 
 use hecs::*;
 use crate::component::{LineIO,Connection};
@@ -39,8 +41,11 @@ impl Server {
 
     Ok(server)
   }
+}
 
-  pub fn update(&mut self, g: &mut Global) {
+impl System for Server {
+  fn update(&mut self, g: &mut Global) -> Vec<Action> {
+    let actions = vec!();
 
     // prepare output and ask for write events
     for (entity, io) in g.world.query_mut::<&mut LineIO>() {
@@ -63,7 +68,7 @@ impl Server {
 
     if let Err(e) = self.poll.poll(&mut events, Some(Duration::from_millis(1000))) {
       println!("poll failed: {}", e); // XXX do something
-      return ();
+      return actions;
     }
 
     for event in events.iter() {
@@ -183,5 +188,10 @@ impl Server {
         }
       };
     }
+
+    actions
+  }
+
+  fn apply(&mut self, g: &mut Global, actions: &Vec<Action>) {
   }
 }
