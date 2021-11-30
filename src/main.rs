@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   // simple generalisation of the idea.
 
   loop {
-    server.update(&mut g)?;
+    server.update(&mut g);
 
     let mut actions: Vec<Action> = vec!();
 

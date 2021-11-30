@@ -40,7 +40,7 @@ impl Server {
     Ok(server)
   }
 
-  pub fn update(&mut self, g: &mut Global) -> io::Result<()> {
+  pub fn update(&mut self, g: &mut Global) {
 
     // prepare output and ask for write events
     for (entity, io) in g.world.query_mut::<&mut LineIO>() {
@@ -50,7 +50,10 @@ impl Server {
             session.queue.extend(
               io.output.drain(0..).map(|s| (s.to_owned() + &"\r\n".to_string()).as_bytes().to_vec())
             );
-            self.poll.registry().reregister(&mut session.conn, *token, Interest::READABLE.add(Interest::WRITABLE))?;
+            if let Err(e) = self.poll.registry().reregister(&mut session.conn, *token, Interest::READABLE.add(Interest::WRITABLE)) {
+              println!("reregister token {:?} (r+w) failed: {}", token, e);
+              // XXX straight up disconnect probably
+            }
           }
         }
       }
@@ -58,7 +61,10 @@ impl Server {
 
     let mut events = Events::with_capacity(128);
 
-    self.poll.poll(&mut events, Some(Duration::from_millis(1000)))?;
+    if let Err(e) = self.poll.poll(&mut events, Some(Duration::from_millis(1000))) {
+      println!("poll failed: {}", e); // XXX do something
+      return ();
+    }
 
     for event in events.iter() {
       match event.token() {
@@ -67,32 +73,41 @@ impl Server {
         Token(0) => match self.listener.accept() {
 
           // no more connections, go for next event
-          Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
+          Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
 
-          // propagate any other error
-          Err(e) => return Err(e),
+          // any other error
+          Err(e) => {
+            println!("accept failed: {}", e); // XXX do something
+          },
 
           // new connection
           Ok((mut conn, addr)) => {
             self.token = Token(self.token.0 + 1);
-            self.poll.registry().register(&mut conn, self.token, Interest::READABLE.add(Interest::WRITABLE))?;
-            self.sessions.insert(self.token, Session {
-              conn:  conn,
-              queue: vec!(),
-            });
-
-            println!("connected [{:?}]: {}", self.token, addr);
-
-            // start them in the lobby
-            let entity = g.world.spawn((
-              LineIO {
-                input:  VecDeque::new(),
-                output: VecDeque::new(),
+            match self.poll.registry().register(&mut conn, self.token, Interest::READABLE.add(Interest::WRITABLE)) {
+              Err(e) => {
+                println!("register token {:?} failed: {}", self.token, e);
+                // XXX straight up disconnect probably
               },
-              Connection::Connected,
-            ));
-            
-            self.token_entity.insert(self.token, entity);
+              _ => {
+                self.sessions.insert(self.token, Session {
+                  conn:  conn,
+                  queue: vec!(),
+                });
+
+                println!("connected [{:?}]: {}", self.token, addr);
+
+                // start them in the lobby
+                let entity = g.world.spawn((
+                  LineIO {
+                    input:  VecDeque::new(),
+                    output: VecDeque::new(),
+                  },
+                  Connection::Connected,
+                ));
+
+                self.token_entity.insert(self.token, entity);
+              },
+            }
           }
         },
 
@@ -103,10 +118,21 @@ impl Server {
             if let Some(session) = self.sessions.get_mut(&token) {
               for data in session.queue.drain(0..) {
                 match session.conn.write(&data) {
-                  Ok(n) if n < data.len() => return Err(io::ErrorKind::WriteZero.into()),
-                  Ok(_) => self.poll.registry().reregister(&mut session.conn, token, Interest::READABLE)?,
-                  Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
-                  Err(e) => return Err(e),
+                  Ok(n) if n < data.len() => {
+                    println!("short write on token {:?}", token);
+                    // XXX not really error, just queue the remainder or something
+                  },
+                  Ok(_) => {
+                    if let Err(e) = self.poll.registry().reregister(&mut session.conn, token, Interest::READABLE) {
+                      println!("reregister token {:?} (r) failed: {}", token, e);
+                      // XXX straight up disconnect probably
+                    }
+                  },
+                  Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => (),
+                  Err(e) => {
+                    println!("write on token {:?} failed: {}", token, e);
+                    // XXX straight up disconnect probably
+                  },
                 }
               }
             }
@@ -118,7 +144,11 @@ impl Server {
               match session.conn.read(&mut buf) {
                 Ok(0) => {
                   // disconnected
-                  println!("disconnected: [{:?}] {}", token, session.conn.peer_addr()?);
+                  let peer_addr: String = match session.conn.peer_addr() {
+                    Ok(a)  => a.to_string(),
+                    Err(e) => format!("[unknown ({})]", e).to_string(),
+                  };
+                  println!("disconnected: [{:?}] {}", token, peer_addr);
                   self.sessions.remove(&token);
 
                   if let Some((_, entity)) = self.token_entity.remove_by_left(&token) {
@@ -143,14 +173,15 @@ impl Server {
                 },
 
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::Interrupted => {},
-                Err(e) => return Err(e),
+                Err(e) => {
+                  println!("read on token {:?} failed: {}", token, e);
+                  // XXX straight up disconnect probably
+                },
               }
             }
           }
         }
       };
     }
-
-    Ok(())
   }
 }
